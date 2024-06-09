@@ -664,13 +664,13 @@ ZSTD_insertBtAndGetAllMatches (
                 assert(curr >= windowLow);
                 if ( dictMode == ZSTD_extDict
                   && ( ((repOffset-1) /*intentional overflow*/ < curr - windowLow)  /* equivalent to `curr > repIndex >= windowLow` */
-                     & (((U32)((dictLimit-1) - repIndex) >= 3) ) /* intentional overflow : do not test positions overlapping 2 memory segments */)
+                     & (ZSTD_index_overlap_check(dictLimit, repIndex)) )
                   && (ZSTD_readMINMATCH(ip, minMatch) == ZSTD_readMINMATCH(repMatch, minMatch)) ) {
                     repLen = (U32)ZSTD_count_2segments(ip+minMatch, repMatch+minMatch, iLimit, dictEnd, prefixStart) + minMatch;
                 }
                 if (dictMode == ZSTD_dictMatchState
                   && ( ((repOffset-1) /*intentional overflow*/ < curr - (dmsLowLimit + dmsIndexDelta))  /* equivalent to `curr > repIndex >= dmsLowLimit` */
-                     & ((U32)((dictLimit-1) - repIndex) >= 3) ) /* intentional overflow : do not test positions overlapping 2 memory segments */
+                     & (ZSTD_index_overlap_check(dictLimit, repIndex)) )
                   && (ZSTD_readMINMATCH(ip, minMatch) == ZSTD_readMINMATCH(repMatch, minMatch)) ) {
                     repLen = (U32)ZSTD_count_2segments(ip+minMatch, repMatch+minMatch, iLimit, dmsEnd, prefixStart) + minMatch;
             }   }
@@ -1372,7 +1372,6 @@ _shortestPath:   /* cur, last_pos, best_mlen, best_off have to be set */
         {   U32 const storeEnd = cur + 2;
             U32 storeStart = storeEnd;
             U32 stretchPos = cur;
-            ZSTD_optimal_t nextStretch;
 
             DEBUGLOG(6, "start reverse traversal (last_pos:%u, cur:%u)",
                         last_pos, cur); (void)last_pos;
@@ -1390,7 +1389,7 @@ _shortestPath:   /* cur, last_pos, best_mlen, best_off have to be set */
                 storeStart = storeEnd;
             }
             while (1) {
-                nextStretch = opt[stretchPos];
+                ZSTD_optimal_t nextStretch = opt[stretchPos];
                 opt[storeStart].litlen = nextStretch.litlen;
                 DEBUGLOG(6, "selected sequence (llen=%u,mlen=%u,ofc=%u)",
                             opt[storeStart].litlen, opt[storeStart].mlen, opt[storeStart].off);
